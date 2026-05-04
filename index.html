@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G-Scan — 전국을 스캔하고 김해를 분석하는 AI 조직 가이드</title>
+  <meta name="description" content="전국 245개 지자체 조직·사무·통계를 AI로 분석하는 행정 데이터 플랫폼">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header" id="header">
+  <div class="logo" onclick="showTab('dashboard')">
+    <span class="logo-title">G-Scan (지-스캔)</span>
+    <span class="logo-sub">전국을 스캔하고 김해를 분석하는 AI 조직 가이드</span>
+  </div>
+  <nav class="nav-tabs" id="navTabs">
+    <a class="nav-tab active" data-tab="dashboard">대시보드</a>
+    <a class="nav-tab" data-tab="orgchart">조직도</a>
+    <a class="nav-tab" data-tab="stats">통계 분석</a>
+    <a class="nav-tab" data-tab="search">검색</a>
+    <a class="nav-tab" data-tab="compare">지자체 비교</a>
+    <a class="nav-tab" data-tab="datamgmt">자료관리</a>
+  </nav>
+  <div class="header-right">
+    <button class="gear-btn" id="gearBtn" title="관리자 설정">⚙</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="main-content">
+
+  <!-- ── TAB 1: 대시보드 ── -->
+  <section class="tab-panel active" id="panel-dashboard">
+    <div class="metric-cards" id="metricCards"></div>
+    <div class="charts-row">
+      <div class="chart-box">
+        <div class="chart-title">부서 수 Top 20</div>
+        <div class="chart-canvas-wrap"><canvas id="chartBar"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">조직 유형 분포 (실/국 vs 과 vs 팀)</div>
+        <div class="chart-canvas-wrap"><canvas id="chartDonut"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-full">
+      <div class="chart-title">인구 vs 부서 수 (광역별)</div>
+      <div class="info-box">
+        인구 자료를 가져온 뒤에 점으로 표시됩니다.<br>
+        <strong>관리자 모드(⚙)</strong> → [데이터 큐레이션] → [전체 최신화 시작]
+      </div>
+      <div class="chart-canvas-wrap" style="height:350px"><canvas id="chartScatter"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ── TAB 2: 조직도 ── -->
+  <section class="tab-panel" id="panel-orgchart">
+    <div class="two-col">
+      <div class="side-list">
+        <input type="text" class="side-search" placeholder="지자체 검색" id="orgSearch">
+        <div id="orgGovList"></div>
+      </div>
+      <div class="right-panel">
+        <div class="placeholder-msg" id="orgPlaceholder">
+          <div class="icon">🏛️</div>
+          <h3>지자체를 선택해 주세요</h3>
+          <p>왼쪽 목록에서 지자체를 클릭하면 조직도가 표시됩니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB 3: 통계 분석 ── -->
+  <section class="tab-panel" id="panel-stats">
+    <div class="two-col">
+      <div class="side-list">
+        <input type="text" class="side-search" placeholder="지자체 검색" id="statsSearch">
+        <div id="statsGovList"></div>
+      </div>
+      <div class="right-panel">
+        <div class="placeholder-msg" id="statsPlaceholder">
+          <div class="icon">📊</div>
+          <h3>지자체를 선택해 주세요</h3>
+          <p>왼쪽 목록에서 지자체를 클릭하면 통계 분석이 표시됩니다. 회색 표시는 아직 통계 자료를 가져오지 않은 지자체입니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB 4: 검색 ── -->
+  <section class="tab-panel" id="panel-search">
+    <div class="search-layout">
+      <div class="filter-panel">
+        <div class="filter-group">
+          <label class="filter-label">키워드 (부서명·사무에서 검색)</label>
+          <input type="text" class="filter-input" placeholder="예: 복지, 환경, 도시계획" id="searchKeyword">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">지자체 유형</label>
+          <div class="checkbox-row">
+            <label><input type="checkbox" id="chkMetro"> 광역시·도</label>
+            <label><input type="checkbox" id="chkLocal"> 시·군·구</label>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">인구(명)</label>
+          <div class="filter-row">
+            <input type="number" class="filter-input" value="0" style="width:100px">
+            <span>~</span>
+            <input type="number" class="filter-input" value="" placeholder="∞" style="width:100px">
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">면적(km²)</label>
+          <div class="filter-row">
+            <input type="number" class="filter-input" value="0" style="width:100px">
+            <span>~</span>
+            <input type="number" class="filter-input" value="" placeholder="∞" style="width:100px">
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">세출예산(억원)</label>
+          <div class="filter-row">
+            <input type="number" class="filter-input" value="0" style="width:100px">
+            <span>~</span>
+            <input type="number" class="filter-input" value="" placeholder="∞" style="width:100px">
+          </div>
+        </div>
+        <button class="btn-primary" id="btnSearch">검색</button>
+        <p class="text-xs text-muted mt-2">키워드 또는 필터를 입력 후 검색</p>
+        <div class="export-row">
+          <button class="btn-export xlsx">엑셀(.xlsx) 파일로</button>
+          <button class="btn-export hwpx">한글(.hwpx) 파일로</button>
+        </div>
+      </div>
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox"></th>
+              <th>광역시·도</th>
+              <th>시·군·구</th>
+              <th>분류</th>
+              <th>상위부서</th>
+              <th>부서명</th>
+              <th>사무 요약</th>
+              <th>조직도</th>
+            </tr>
+          </thead>
+          <tbody id="searchResults">
+            <tr><td colspan="8" class="result-placeholder">키워드 또는 필터를 입력 후 검색</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB 5: 지자체 비교 ── -->
+  <section class="tab-panel" id="panel-compare">
+    <div class="compare-header">
+      <div class="compare-bar">
+        <label>기준 지자체</label>
+        <select class="compare-select" id="compareBase">
+          <option>김해시</option>
+        </select>
+        <span>▾</span>
+        <button class="btn-outline">+ 지자체 추가</button>
+        <button class="btn-outline">☆ 비교 세트</button>
+        <span class="count-badge" id="compareCount">총 6개 비교 중</span>
+      </div>
+      <div class="tag-row" id="compareTags"></div>
+      <div class="compare-filters">
+        <span class="text-sm text-muted">검색 대상</span>
+        <span class="filter-chip active" data-filter="all">전체</span>
+        <span class="filter-chip" data-filter="dept">부서명</span>
+        <span class="filter-chip" data-filter="duty">담당업무</span>
+        <input type="text" class="compare-keyword" placeholder="키워드 입력 후 Enter (예: 복지·환경·도시계획)">
+      </div>
+    </div>
+
+    <!-- 기본 현황 -->
+    <div class="compare-table-wrap">
+      <div class="section-title"><span class="toggle">▼</span> 📊 통계 비교</div>
+      <div class="section-title"><span class="toggle">▼</span> 기본 현황</div>
+      <table class="cmp-table" id="cmpBasic"></table>
+    </div>
+
+    <!-- 재정 -->
+    <div class="compare-table-wrap">
+      <div class="section-title"><span class="toggle">▼</span> 재정</div>
+      <table class="cmp-table" id="cmpFinance"></table>
+    </div>
+
+    <!-- 인적자원 -->
+    <div class="compare-table-wrap">
+      <div class="section-title"><span class="toggle">▼</span> 인적자원</div>
+      <table class="cmp-table" id="cmpHR"></table>
+    </div>
+
+    <!-- AI 보고서 -->
+    <div class="ai-report-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="chart-title">🤖 AI 종합 분석 보고서</div>
+        <div style="display:flex;gap:6px">
+          <span class="filter-chip">간단</span>
+          <span class="filter-chip active">표준 ⭐</span>
+          <span class="filter-chip">상세</span>
+        </div>
+      </div>
+      <button class="btn-primary" style="max-width:300px" id="btnAIReport">🤖 이 비교에 대해 AI에 질문</button>
+      <p class="text-xs text-muted mt-2">위 버튼을 눌러 보고서를 생성하세요. 비교 대상이 변경되면 보고서를 새로 생성해야 합니다.</p>
+      <p class="text-xs text-muted">데이터 기준: 인구 / 세출예산 / 공무원 / 재정자립도 — SGIS · LOFIN · KOSIS</p>
+    </div>
+  </section>
+
+  <!-- ── TAB 6: 자료관리 ── -->
+  <section class="tab-panel" id="panel-datamgmt">
+    <div class="data-mgmt-header">
+      <h2>🌐 부서 팀 자동 크롤</h2>
+      <p>미입력 과·담당관 17600건 · URL 캐시됨 0건</p>
+    </div>
+    <div class="data-mgmt-layout">
+      <div class="dept-list">
+        <div class="dept-list-header">
+          <input type="text" placeholder="검색" id="deptSearchInput">
+          <button>🔄</button>
+        </div>
+        <div id="deptListBody"></div>
+      </div>
+      <div class="iframe-panel">
+        <div class="iframe-bar">
+          <button>←</button>
+          <input type="text" class="iframe-url" value="https://...go.kr/..." readonly>
+          <button class="btn-go">이동</button>
+        </div>
+        <div class="iframe-body">← 좌측에서 부서를 선택하세요</div>
+      </div>
+      <div class="ai-crawl-panel">
+        <button class="btn-crawl">🤖 이 페이지 AI 크롤</button>
+        <div style="padding:12px">
+          <button class="btn-outline" style="width:100%;margin-bottom:8px">📋 원주 수입 · 관리</button>
+          <p class="text-xs text-muted">저장 시 dept_info…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══ CHAT WIDGET ═══ -->
+<button class="chat-toggle" id="chatToggle">💬</button>
+<div class="chat-widget" id="chatWidget">
+  <div class="chat-header">
+    <div class="avatar">💬</div>
+    <div class="info">
+      <h4>G-Scan 어시스턴트</h4>
+      <p>전국 245개 지자체 조직·사무·통계</p>
+    </div>
+    <div class="chat-header-actions">
+      <button id="chatReset" title="대화 초기화">↻</button>
+      <button id="chatClose" title="닫기">✕</button>
+    </div>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="chat-welcome">
+      <div class="bubble">💬</div>
+      <h3>무엇이든 물어보세요</h3>
+      <p>지자체 조직·사무·통계(인구·면적·세출·공무원·재정자립도)를 안내합니다.</p>
+    </div>
+    <div class="chat-suggestions" id="chatSuggestions"></div>
+  </div>
+  <div class="chat-footer">
+    <textarea class="chat-input" id="chatInput" rows="1" placeholder="예: 강남구 환경 담당 부서는? (Shift+Enter 줄바꿈)"></textarea>
+    <button class="chat-send" id="chatSend">전송</button>
+  </div>
+</div>
+
+<!-- ═══ ADMIN MODAL ═══ -->
+<div class="modal-overlay" id="adminModal">
+  <div class="modal-box">
+    <h3>관리자 패스코드</h3>
+    <p>로컬 호스트에서만 진입할 수 있습니다.</p>
+    <input type="password" class="modal-input" placeholder="패스코드" id="adminPass">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">취소</button>
+      <button class="btn-confirm" id="modalConfirm">확인</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
